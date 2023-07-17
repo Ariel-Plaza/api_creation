@@ -5,12 +5,22 @@ import * as path from "path";
 import { fileURLToPath } from "url";
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-let pathAnime = path.resolve(__dirname, "../database/anime.json");
+const pathAnime = path.resolve(__dirname, "../database/anime.json");
+
+const readDB = await fs.readFile(pathAnime, "utf8");
+
+const writeDB = async (data) => {
+  try {
+    await fs.writeFile(pathAnime, JSON.stringify(data, null, 2), "utf8");
+    console.log("File written successfully");
+  } catch (error) {
+    console.error(`Error writing to file: ${error}`);
+  }
+};
 
 export const allAnime = async (req, res) => {
   try {
-    let data = await fs.readFile(pathAnime, "utf8");
-    data = JSON.parse(data);
+    let data = JSON.parse(readDB);
     console.log(data);
     res.json({ anime: data.anime });
   } catch (error) {
@@ -25,8 +35,7 @@ export const allAnime = async (req, res) => {
 export const findAnimeByID = async (req, res) => {
   let { id } = req.params;
   try {
-    let data = await fs.readFile(pathAnime, "utf8");
-    data = JSON.parse(data);
+    let data = JSON.parse(readDB);
     let animeFound = data.anime.find((anime) => anime.id == id);
     if (!animeFound)
       return res.status(404).json({
@@ -47,7 +56,6 @@ export const findAnimeByID = async (req, res) => {
 export const createAnime = async (req, res) => {
   try {
     let { name, genre, year, author } = req.body;
-
     let newAnime = {
       id: uuid().slice(0, 4),
       name,
@@ -55,11 +63,9 @@ export const createAnime = async (req, res) => {
       year,
       author,
     };
-    console.log(newAnime);
-    let data = await fs.readFile(pathAnime, "utf8");
-    data = JSON.parse(data);
+    let data = JSON.parse(readDB);
     data.anime.push(newAnime);
-    await fs.writeFile(pathAnime, JSON.stringify(data, null, 2), "utf8");
+    writeDB(data);
 
     res.status(201).json({
       code: 201,
@@ -78,9 +84,7 @@ export const createAnime = async (req, res) => {
 export const deleteAnime = async (req, res) => {
   let { id } = req.params;
   try {
-    let data = await fs.readFile(pathAnime, "utf8");
-    data = JSON.parse(data);
-
+    let data = JSON.parse(readDB);
     let index = data.anime.findIndex((anime) => anime.id == id);
     if (index < 0)
       return res.status(404).json({
@@ -89,8 +93,7 @@ export const deleteAnime = async (req, res) => {
       });
 
     let animeRemoved = data.anime.splice(index, 1);
-
-    await fs.writeFile(pathAnime, JSON.stringify(data, null, 2), "utf8");
+    writeDB(data);
 
     res.status(200).json({
       code: 200,
@@ -110,36 +113,31 @@ export const updateAnime = async (req, res) => {
   let { id } = req.params;
   try {
     let { name, genre, year, author } = req.body;
-
-    let data = await fs.readFile(pathAnime, "utf8");
-    data = JSON.parse(data);
-
+    let data = JSON.parse(readDB);
     let animeSought = data.anime.find((anime) => anime.id == id);
 
     if (!animeSought)
       return res.status(404).json({
         code: 404,
-        message: "The animal you want to modify is not in the database.",
+        message: "The anime you want to modify is not in the database.",
       });
 
     animeSought.name = name || animeSought.name;
     animeSought.genre = genre || animeSought.genre;
     animeSought.year = year || animeSought.year;
     animeSought.author = author || animeSought.author;
-
-
-    await fs.writeFile(pathAnime, JSON.stringify(data, null, 2), "utf8");
+    writeDB(data);
 
     res.status(201).json({
       code: 201,
-      message: `You have successfully modified the animal with ID: ${id}`,
+      message: `You have successfully modified the anime with ID: ${id}`,
       anime: animeSought,
     });
   } catch (error) {
     console.log(error);
     res.status(500).json({
       code: 500,
-      message: `Error modifying anima with ID: ${id} ` ,
+      message: `Error modifying anime with ID: ${id} `,
     });
   }
 };
